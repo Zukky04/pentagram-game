@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>五芒星ゲーム</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        text-align: center;
+        background: #f0f0f0;
+        font-family: sans-serif;
+      }
+      #root {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      .palette {
+        display: flex;
+        justify-content: center;
+        margin: 10px;
+      }
+      .color-swatch {
+        width: 40px;
+        height: 40px;
+        margin: 5px;
+        cursor: pointer;
+        border: 2px solid transparent;
+      }
+      .color-swatch.selected {
+        border: 2px solid #000;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- React と ReactDOM をCDNから読み込み -->
+    <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+    <!-- Babelを利用してJSXを変換 -->
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script type="text/babel">
+      // ずっきー、まずはカラーパレットの8色を定義
+      const paletteColors = [
+        "#FF0000", // 赤
+        "#FFA500", // オレンジ
+        "#FFFF00", // 黄
+        "#008000", // 緑
+        "#0000FF", // 青
+        "#4B0082", // 藍
+        "#EE82EE", // 紫
+        "#000000"  // 黒
+      ];
+      
+      function PentagramGame() {
+        // 選択中の色（初期はパレットの最初の色）
+        const [selectedColor, setSelectedColor] = React.useState(paletteColors[0]);
+        // 各パーツの色（5つの三角形と中央の五角形：合計6個、初期は白）
+        const [partColors, setPartColors] = React.useState(Array(6).fill("#FFFFFF"));
+      
+        // SVG内で描く五芒星のサイズ設定
+        const R = 150; // 外側の円の半径（外頂点）
+        const r = R * 0.382; // 内側の円の半径（中心五角形の頂点）
+      
+        // 外頂点（五芒星の尖った部分）の座標を計算（中心を(0,0)とする）
+        const outerPoints = [];
+        for (let i = 0; i < 5; i++) {
+          const angle = ((-90 + i * 72) * Math.PI) / 180;
+          outerPoints.push({ x: R * Math.cos(angle), y: R * Math.sin(angle) });
+        }
+      
+        // 内頂点（中央五角形の各頂点）の座標を計算
+        // 角度は外頂点と外頂点の間の角度（-54, 18, 90, 162, 234度）
+        const innerPoints = [];
+        for (let i = 0; i < 5; i++) {
+          const angle = ((-54 + i * 72) * Math.PI) / 180;
+          innerPoints.push({ x: r * Math.cos(angle), y: r * Math.sin(angle) });
+        }
+      
+        // 各三角形の定義
+        // 各三角形は、外頂点とそれに隣接する内頂点2つ（前後）で構成
+        const triangles = [];
+        for (let i = 0; i < 5; i++) {
+          // 前の内頂点は (i + 4) % 5
+          const p1 = outerPoints[i];
+          const p2 = innerPoints[i];
+          const p3 = innerPoints[(i + 4) % 5];
+          triangles.push([p1, p2, p3]);
+        }
+      
+        // 中央の五角形は内頂点を順番に結んで作成
+        const pentagon = innerPoints;
+      
+        // パーツがクリックされたとき、選択色に更新するハンドラ
+        const handleShapeClick = (index, event) => {
+          // クリック時にイベントのバブリングを止める（パレットなどと干渉しないように）
+          event.stopPropagation();
+          setPartColors(prev => {
+            const newColors = [...prev];
+            newColors[index] = selectedColor;
+            return newColors;
+          });
+        };
+      
+        return (
+          <div>
+            {/* カラーパレットの表示 */}
+            <div className="palette">
+              {paletteColors.map(color => (
+                <div
+                  key={color}
+                  className={"color-swatch" + (color === selectedColor ? " selected" : "")}
+                  style={{ backgroundColor: color }}
+                  onClick={() => setSelectedColor(color)}
+                />
+              ))}
+            </div>
+            {/* SVGエリア。viewBoxで中心を(0,0)に設定 */}
+            <svg width="400" height="400" viewBox="-200 -200 400 400">
+              {/* 5つの三角形（星の先端部分）を描画 */}
+              {triangles.map((triangle, i) => (
+                <polygon
+                  key={"triangle-" + i}
+                  points={triangle.map(p => `${p.x},${p.y}`).join(" ")}
+                  fill={partColors[i]}
+                  stroke="#000"
+                  strokeWidth="2"
+                  onClick={(e) => handleShapeClick(i, e)}
+                />
+              ))}
+              {/* 中央の五角形 */}
+              <polygon
+                points={pentagon.map(p => `${p.x},${p.y}`).join(" ")}
+                fill={partColors[5]}
+                stroke="#000"
+                strokeWidth="2"
+                onClick={(e) => handleShapeClick(5, e)}
+              />
+            </svg>
+          </div>
+        );
+      }
+      
+      // ReactDOMを用いて、PentagramGameコンポーネントを#rootにレンダリング
+      ReactDOM.render(<PentagramGame />, document.getElementById('root'));
+    </script>
+  </body>
+</html>
